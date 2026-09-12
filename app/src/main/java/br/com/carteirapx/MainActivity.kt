@@ -55,12 +55,19 @@ class MainActivity : ComponentActivity() {
 private fun AppRoot() {
     val navController = rememberNavController()
     var showLancar by remember { mutableStateOf(false) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    // Contas e Categorias têm seu próprio FAB ("Nova conta"/"Nova categoria") — o FAB global
+    // de Lançar fica escondido nessas telas para não sobrepor o botão certo.
+    val showGlobalFab = currentRoute != Routes.Contas.route && currentRoute != Routes.Categorias.route
 
     Scaffold(
         bottomBar = { AppBottomBar(navController) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showLancar = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Lançar")
+            if (showGlobalFab) {
+                FloatingActionButton(onClick = { showLancar = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Lançar")
+                }
             }
         }
     ) { padding ->
