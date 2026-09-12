@@ -1,0 +1,30 @@
+CARTEIRA PX — app Android de finanças pessoais/familiares
+============================================================
+
+STACK: Kotlin + Jetpack Compose + Room + Hilt + Navigation Compose + WorkManager
+ARQUITETURA: data (entities/DAO) -> domain (use cases) -> ui (Compose + ViewModel)
+
+ESTADO ATUAL (validação de schema + navegação):
+- Schema Room completo: Account, Category, RecurringRule, Transaction, Transfer, Goal (stub)
+- Modelo "série + instância": RecurringRule define o padrão; Transaction é cada ocorrência real,
+  com recurringRuleId opcional. Editar uma instância nunca reescreve a regra.
+- Status (PREVISTA/VENCENDO/ATRASADA/CONFIRMADA/CANCELADA) calculado por data, nunca setado
+  manualmente (exceto cancelamento).
+- Saldo real e projetado calculados sempre via query SQL (nunca campo armazenado) —
+  ver TransactionDao.observeSaldoReal() / observeSaldoProjetado() / observeSaldoProjetadoAte().
+- Valores monetários armazenados em CENTAVOS (Long), para evitar erro de ponto flutuante.
+- Navegação: bottom nav (Dashboard | Extrato | Resumo | Contas) + FAB central abrindo o
+  bottom sheet "Lançar". Tela de Detalhe acessível por rota com argumento (transactionId).
+- Dashboard já é funcional de verdade (Hilt injeta o Room, ViewModel expõe Flow combinado de
+  saldo real + projetado 30 dias) — serve para validar o pipeline ponta a ponta.
+- Demais telas (Extrato, Resumo, Contas, Categorias, Detalhe, Lançar) são placeholders visuais,
+  prontos para receber a lógica de verdade nas próximas etapas.
+
+PRÓXIMOS PASSOS SUGERIDOS (fora do escopo desta validação):
+1. Repository layer (interfaces + implementações sobre os DAOs)
+2. Use cases de cálculo de status e confirmação de lançamento
+3. Fluxo completo de "Lançar" (formulário real)
+4. CRUD de Contas e Categorias
+5. Extrato com filtros
+6. Gráficos no Resumo (biblioteca de charts)
+7. WorkManager + BroadcastReceiver de BOOT_COMPLETED para notificações agendadas
