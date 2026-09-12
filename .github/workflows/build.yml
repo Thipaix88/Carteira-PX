@@ -51,11 +51,15 @@ jobs:
           echo "::error::$MSG"
           exit 1
 
+      - name: Definir sufixo com o hash do commit
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK artifact
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: CarteiraPX-debug-apk
+          name: CarteiraPX-debug-apk-${{ steps.sha.outputs.short }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload full build log always
