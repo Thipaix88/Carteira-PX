@@ -6,8 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PieChart
@@ -118,10 +118,10 @@ private fun AppBottomBar(navController: NavHostController) {
             label = { Text("Resumo") }
         )
         NavigationBarItem(
-            selected = currentRoute == Routes.Contas.route,
-            onClick = { navController.navigateSingleTopTo(Routes.Contas.route) },
-            icon = { Icon(Icons.Default.AccountBalanceWallet, null) },
-            label = { Text("Contas") }
+            selected = currentRoute == Routes.Categorias.route,
+            onClick = { navController.navigateSingleTopTo(Routes.Categorias.route) },
+            icon = { Icon(Icons.Default.Category, null) },
+            label = { Text("Categorias") }
         )
     }
 }

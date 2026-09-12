@@ -12,6 +12,6 @@ sealed class Routes(val route: String, val label: String) {
 
     companion object {
         /** Itens que aparecem na bottom nav (a posição do meio é reservada para o FAB "Lançar"). */
-        val bottomBarItems = listOf(Dashboard, Extrato, Resumo, Contas)
+        val bottomBarItems = listOf(Dashboard, Extrato, Resumo, Categorias)
     }
 }
