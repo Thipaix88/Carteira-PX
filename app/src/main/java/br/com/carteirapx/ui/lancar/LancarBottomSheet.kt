@@ -40,7 +40,9 @@ import br.com.carteirapx.data.entity.RecurrenceFrequency
 import br.com.carteirapx.data.entity.TransactionType
 import br.com.carteirapx.util.parseToCentavos
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 
 private fun RecurrenceFrequency.label(): String = when (this) {
     RecurrenceFrequency.SEMANAL -> "Semanal"
@@ -186,12 +188,28 @@ fun LancarBottomSheet(onDismiss: () -> Unit, vm: LancarViewModel = hiltViewModel
     }
 
     if (showDatePicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = dateMillis)
+        val initialUtc = remember(dateMillis) {
+            val local = Calendar.getInstance().apply { timeInMillis = dateMillis }
+            Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear()
+                set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH))
+            }.timeInMillis
+        }
+        val state = rememberDatePickerState(initialSelectedDateMillis = initialUtc)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { dateMillis = it }
+                    state.selectedDateMillis?.let { utcMillis ->
+                        // O DatePicker retorna meia-noite em UTC; convertemos para meio-dia no fuso
+                        // local do mesmo dia de calendário, evitando o "dia anterior" em fusos negativos.
+                        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMillis }
+                        val localCal = Calendar.getInstance().apply {
+                            set(utcCal.get(Calendar.YEAR), utcCal.get(Calendar.MONTH), utcCal.get(Calendar.DAY_OF_MONTH), 12, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        dateMillis = localCal.timeInMillis
+                    }
                     showDatePicker = false
                 }) { Text("OK") }
             },

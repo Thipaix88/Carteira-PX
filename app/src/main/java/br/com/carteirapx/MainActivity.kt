@@ -76,14 +76,18 @@ private fun AppRoot() {
             startDestination = Routes.Dashboard.route,
             modifier = Modifier.padding(padding)
         ) {
-            composable(Routes.Dashboard.route) { DashboardScreen() }
-            composable(Routes.Extrato.route) { ExtratoScreen() }
+            composable(Routes.Dashboard.route) {
+                DashboardScreen(onOpenDetail = { id -> navController.navigate(Routes.Detalhe.build(id)) })
+            }
+            composable(Routes.Extrato.route) {
+                ExtratoScreen(onOpenDetail = { id -> navController.navigate(Routes.Detalhe.build(id)) })
+            }
             composable(Routes.Resumo.route) { ResumoScreen() }
             composable(Routes.Contas.route) { ContasScreen() }
             composable(Routes.Categorias.route) { CategoriasScreen() }
             composable(Routes.Detalhe.route) { backStackEntry ->
                 val id = backStackEntry.arguments?.getString("transactionId")?.toLongOrNull() ?: 0L
-                DetalheScreen(id)
+                DetalheScreen(id, onBack = { navController.popBackStack() })
             }
         }
     }
