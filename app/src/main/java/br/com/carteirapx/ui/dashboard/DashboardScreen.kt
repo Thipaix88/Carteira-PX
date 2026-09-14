@@ -7,8 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +60,34 @@ fun DashboardScreen(onOpenDetail: (Long) -> Unit, vm: DashboardViewModel = hiltV
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
+                }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = vm::mesAnterior) { Icon(Icons.Default.ChevronLeft, "Mês anterior") }
+                    Text(state.mesLabel, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = vm::proximoMes) { Icon(Icons.Default.ChevronRight, "Próximo mês") }
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("Receitas", style = MaterialTheme.typography.labelSmall)
+                        Text(state.receitasMes.centavosToDisplay(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                    }
+                    Column {
+                        Text("Despesas", style = MaterialTheme.typography.labelSmall)
+                        Text(state.despesasMes.centavosToDisplay(), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium)
+                    }
+                    Column {
+                        Text("Saldo do mês", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            state.saldoMes.centavosToDisplay(),
+                            fontWeight = FontWeight.Bold,
+                            color = if (state.saldoMes >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

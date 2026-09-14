@@ -40,6 +40,24 @@ class DetalheViewModel @Inject constructor(
         }
     }
 
+    fun editar(description: String, valorPrevisto: Long, categoryId: Long, dataPrevista: Long) {
+        val atual = _transaction.value ?: return
+        val novoStatus = if (atual.status in setOf(TransactionStatus.PREVISTA, TransactionStatus.VENCENDO, TransactionStatus.ATRASADA)) {
+            br.com.carteirapx.domain.usecase.ComputeTransactionStatus(dataPrevista)
+        } else atual.status
+        val atualizado = atual.copy(
+            description = description,
+            valorPrevisto = valorPrevisto,
+            categoryId = categoryId,
+            dataPrevista = dataPrevista,
+            status = novoStatus
+        )
+        viewModelScope.launch {
+            transactionRepo.upsert(atualizado)
+            _transaction.value = atualizado
+        }
+    }
+
     fun cancelar() {
         val atual = _transaction.value ?: return
         if (atual.status == TransactionStatus.CONFIRMADA) return

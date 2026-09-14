@@ -98,7 +98,9 @@ private fun AppRoot() {
             composable(Routes.Extrato.route) {
                 ExtratoScreen(onOpenDetail = { id -> navController.navigate(Routes.Detalhe.build(id)) })
             }
-            composable(Routes.Resumo.route) { ResumoScreen() }
+            composable(Routes.Resumo.route) {
+                ResumoScreen(onOpenDetail = { id -> navController.navigate(Routes.Detalhe.build(id)) })
+            }
             composable(Routes.Contas.route) { ContasScreen() }
             composable(Routes.Categorias.route) { CategoriasScreen() }
             composable(Routes.Detalhe.route) { backStackEntry ->

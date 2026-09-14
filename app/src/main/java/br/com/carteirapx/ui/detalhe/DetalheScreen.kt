@@ -7,9 +7,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,8 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,14 +41,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import br.com.carteirapx.data.entity.Category
 import br.com.carteirapx.data.entity.TransactionStatus
 import br.com.carteirapx.ui.categorias.CategoryIcons
 import br.com.carteirapx.ui.common.color
 import br.com.carteirapx.ui.common.label
-import br.com.carteirapx.ui.common.sign
 import br.com.carteirapx.util.centavosToDisplay
 import br.com.carteirapx.util.centavosToInputText
+import br.com.carteirapx.util.localDateToUtcMillis
 import br.com.carteirapx.util.parseToCentavos
+import br.com.carteirapx.util.utcMillisToLocalDate
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -52,6 +61,7 @@ fun DetalheScreen(transactionId: Long, onBack: () -> Unit, vm: DetalheViewModel 
     val t by vm.transaction.collectAsState()
     val categories by vm.categories.collectAsState()
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -93,6 +103,9 @@ fun DetalheScreen(transactionId: Long, onBack: () -> Unit, vm: DetalheViewModel 
 
             HorizontalDivider()
 
+            OutlinedButton(onClick = { showEditDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Editar")
+            }
             if (podeConfirmar) {
                 Button(onClick = { showConfirmDialog = true }, modifier = Modifier.fillMaxWidth()) {
                     Text("Confirmar")
@@ -115,6 +128,21 @@ fun DetalheScreen(transactionId: Long, onBack: () -> Unit, vm: DetalheViewModel 
                 onConfirm = { valor ->
                     vm.confirmar(valor)
                     showConfirmDialog = false
+                }
+            )
+        }
+
+        if (showEditDialog) {
+            EditDialog(
+                description = current.description,
+                valorPrevisto = current.valorPrevisto,
+                categoryId = current.categoryId,
+                dataPrevista = current.dataPrevista,
+                categorias = categories.filter { it.type == current.type },
+                onDismiss = { showEditDialog = false },
+                onSave = { desc, valor, catId, data ->
+                    vm.editar(desc, valor, catId, data)
+                    showEditDialog = false
                 }
             )
         }
@@ -150,4 +178,84 @@ private fun ConfirmDialog(valorSugerido: Long, onDismiss: () -> Unit, onConfirm:
         confirmButton = { TextButton(onClick = { onConfirm(parseToCentavos(valorText)) }) { Text("Confirmar") } },
         dismissButton = { TextButton(onDismiss) { Text("Cancelar") } }
     )
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun EditDialog(
+    description: String,
+    valorPrevisto: Long,
+    categoryId: Long,
+    dataPrevista: Long,
+    categorias: List<Category>,
+    onDismiss: () -> Unit,
+    onSave: (String, Long, Long, Long) -> Unit
+) {
+    var desc by remember { mutableStateOf(description) }
+    var valorText by remember { mutableStateOf(valorPrevisto.centavosToInputText()) }
+    var catId by remember { mutableStateOf(categoryId) }
+    var data by remember { mutableStateOf(dataPrevista) }
+    var categoryMenu by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    val dateFmt = remember { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")) }
+    val categoriaSelecionada = categorias.firstOrNull { it.id == catId } ?: categorias.firstOrNull()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar lançamento") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Descrição") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = valorText, onValueChange = { valorText = it }, label = { Text("Valor (R$)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+
+                ExposedDropdownMenuBox(expanded = categoryMenu, onExpandedChange = { categoryMenu = it }) {
+                    OutlinedTextField(
+                        value = categoriaSelecionada?.name ?: "Nenhuma",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoria") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryMenu) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    DropdownMenu(categoryMenu, { categoryMenu = false }) {
+                        categorias.forEach { c ->
+                            DropdownMenuItem(text = { Text(c.name) }, onClick = { catId = c.id; categoryMenu = false })
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = dateFmt.format(data),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Data") },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = { TextButton(onClick = { showDatePicker = true }) { Text("Alterar") } }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = desc.isNotBlank() && categoriaSelecionada != null,
+                onClick = { onSave(desc.trim(), parseToCentavos(valorText), categoriaSelecionada!!.id, data) }
+            ) { Text("Salvar") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("Cancelar") } }
+    )
+
+    if (showDatePicker) {
+        val initialUtc = remember(data) { localDateToUtcMillis(data) }
+        val state = rememberDatePickerState(initialSelectedDateMillis = initialUtc)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { data = utcMillisToLocalDate(it) }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton({ showDatePicker = false }) { Text("Cancelar") } }
+        ) { DatePicker(state = state) }
+    }
 }

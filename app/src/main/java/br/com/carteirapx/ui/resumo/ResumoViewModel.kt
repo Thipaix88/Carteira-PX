@@ -3,27 +3,27 @@ package br.com.carteirapx.ui.resumo
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.com.carteirapx.data.entity.Transaction
 import br.com.carteirapx.data.entity.TransactionStatus
 import br.com.carteirapx.data.entity.TransactionType
 import br.com.carteirapx.data.repository.CategoryRepository
 import br.com.carteirapx.data.repository.TransactionRepository
+import br.com.carteirapx.ui.common.TransactionUi
+import br.com.carteirapx.util.monthRange
+import br.com.carteirapx.util.monthShortLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 import javax.inject.Inject
 
-data class CategorySlice(val name: String, val valor: Long, val color: Color)
+data class CategorySlice(val categoryId: Long, val name: String, val valor: Long, val color: Color)
 data class MonthBar(val label: String, val valor: Long)
 
 data class ResumoUiState(
     val totalMes: Long = 0,
     val fatias: List<CategorySlice> = emptyList(),
-    val meses: List<MonthBar> = emptyList()
+    val meses: List<MonthBar> = emptyList(),
+    val transacoesMes: List<TransactionUi> = emptyList()
 )
 
 private val PALETTE = listOf(
@@ -43,39 +43,27 @@ class ResumoViewModel @Inject constructor(
 
         val (start, end) = monthRange(0)
         val esteMes = valid.filter { it.type == TransactionType.DESPESA && it.dataPrevista in start..end }
+        val transacoesMes = esteMes.map { t ->
+            val c = byId[t.categoryId]
+            TransactionUi(t, c?.name ?: "Sem categoria", c?.iconName ?: "category")
+        }
+
         val porCategoria = esteMes.groupBy { it.categoryId }
             .mapValues { (_, list) -> list.sumOf { it.valorRealizado ?: it.valorPrevisto } }
             .entries.sortedByDescending { it.value }
 
         val total = porCategoria.sumOf { it.value }
         val fatias = porCategoria.mapIndexed { i, (catId, valor) ->
-            CategorySlice(byId[catId]?.name ?: "Outros", valor, PALETTE[i % PALETTE.size])
+            CategorySlice(catId, byId[catId]?.name ?: "Outros", valor, PALETTE[i % PALETTE.size])
         }
 
         val meses = (5 downTo 0).map { mesesAtras ->
             val (s, e) = monthRange(-mesesAtras)
-            val label = monthLabel(mesesAtras)
             val valor = valid.filter { it.type == TransactionType.DESPESA && it.dataPrevista in s..e }
                 .sumOf { it.valorRealizado ?: it.valorPrevisto }
-            MonthBar(label, valor)
+            MonthBar(monthShortLabel(-mesesAtras), valor)
         }
 
-        ResumoUiState(totalMes = total, fatias = fatias, meses = meses)
+        ResumoUiState(totalMes = total, fatias = fatias, meses = meses, transacoesMes = transacoesMes)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ResumoUiState())
-}
-
-/** Intervalo do mês, deslocado por [offsetMeses] a partir do mês atual (negativo = meses passados). */
-private fun monthRange(offsetMeses: Int): Pair<Long, Long> {
-    val cal = Calendar.getInstance()
-    cal.add(Calendar.MONTH, offsetMeses)
-    cal.set(Calendar.DAY_OF_MONTH, 1); cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0)
-    val start = cal.timeInMillis
-    cal.add(Calendar.MONTH, 1); cal.add(Calendar.MILLISECOND, -1)
-    return start to cal.timeInMillis
-}
-
-private fun monthLabel(mesesAtras: Int): String {
-    val cal = Calendar.getInstance()
-    cal.add(Calendar.MONTH, -mesesAtras)
-    return SimpleDateFormat("MMM", Locale("pt", "BR")).format(cal.time).replaceFirstChar { it.uppercase() }
 }
