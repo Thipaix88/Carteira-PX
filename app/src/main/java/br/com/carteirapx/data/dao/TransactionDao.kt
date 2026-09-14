@@ -28,6 +28,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE recurringRuleId = :ruleId ORDER BY dataPrevista")
     fun observeByRule(ruleId: Long): Flow<List<Transaction>>
 
+    @Query("SELECT * FROM transactions WHERE recurringRuleId = :ruleId ORDER BY dataPrevista DESC LIMIT 1")
+    suspend fun getLatestByRule(ruleId: Long): Transaction?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(transaction: Transaction): Long
 
