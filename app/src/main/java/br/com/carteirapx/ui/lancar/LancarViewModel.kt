@@ -13,6 +13,7 @@ import br.com.carteirapx.data.repository.CategoryRepository
 import br.com.carteirapx.data.repository.RecurringRuleRepository
 import br.com.carteirapx.data.repository.TransactionRepository
 import br.com.carteirapx.domain.usecase.ComputeTransactionStatus
+import br.com.carteirapx.domain.usecase.GenerateRecurringOccurrencesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
@@ -26,7 +27,8 @@ class LancarViewModel @Inject constructor(
     private val categoryRepo: CategoryRepository,
     private val accountRepo: AccountRepository,
     private val transactionRepo: TransactionRepository,
-    private val ruleRepo: RecurringRuleRepository
+    private val ruleRepo: RecurringRuleRepository,
+    private val generateRecurring: GenerateRecurringOccurrencesUseCase
 ) : ViewModel() {
 
     val categories = categoryRepo.observeAll()
@@ -72,6 +74,7 @@ class LancarViewModel @Inject constructor(
                     accountId = account.id
                 )
             )
+            if (recurringRuleId != null) generateRecurring()
             onDone()
         }
     }

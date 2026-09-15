@@ -3,10 +3,13 @@ package br.com.carteirapx.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.carteirapx.data.entity.Category
+import br.com.carteirapx.data.entity.Transaction
 import br.com.carteirapx.data.entity.TransactionStatus
 import br.com.carteirapx.data.entity.TransactionType
 import br.com.carteirapx.data.repository.CategoryRepository
 import br.com.carteirapx.data.repository.TransactionRepository
+import br.com.carteirapx.domain.usecase.PeriodDeficitAlert
+import br.com.carteirapx.domain.usecase.PeriodDeficitAlertUseCase
 import br.com.carteirapx.ui.common.TransactionUi
 import br.com.carteirapx.util.monthFullLabel
 import br.com.carteirapx.util.monthRange
@@ -26,13 +29,16 @@ data class DashboardUiState(
     val mesLabel: String = "",
     val receitasMes: Long = 0,
     val despesasMes: Long = 0,
-    val saldoMes: Long = 0
+    val saldoMes: Long = 0,
+    val transacoesMes: List<TransactionUi> = emptyList(),
+    val alertaPeriodo: PeriodDeficitAlert? = null
 )
 
 private data class BaseData(
     val real: Long,
     val projetado: Long,
-    val proximos: List<TransactionUi>
+    val proximos: List<TransactionUi>,
+    val categorias: Map<Long, Category>
 )
 
 @HiltViewModel
@@ -54,7 +60,8 @@ class DashboardViewModel @Inject constructor(
         BaseData(
             real = real,
             projetado = projetado,
-            proximos = proximos.map { t -> t.toUi(byId) }
+            proximos = proximos.map { it.toUi(byId) },
+            categorias = byId
         )
     }
 
@@ -72,7 +79,9 @@ class DashboardViewModel @Inject constructor(
             mesLabel = monthFullLabel(offset),
             receitasMes = receitas,
             despesasMes = despesas,
-            saldoMes = receitas - despesas
+            saldoMes = receitas - despesas,
+            transacoesMes = doMes.map { it.toUi(base.categorias) },
+            alertaPeriodo = if (offset == 0) PeriodDeficitAlertUseCase(allTx) else null
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
 
@@ -80,7 +89,7 @@ class DashboardViewModel @Inject constructor(
     fun proximoMes() { mesOffset.value += 1 }
 }
 
-private fun br.com.carteirapx.data.entity.Transaction.toUi(byId: Map<Long, Category>): TransactionUi {
+private fun Transaction.toUi(byId: Map<Long, Category>): TransactionUi {
     val c = byId[categoryId]
     return TransactionUi(this, c?.name ?: "Sem categoria", c?.iconName ?: "category")
 }
